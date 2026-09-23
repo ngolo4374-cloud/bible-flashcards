@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Bible Flashcards & Manager</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #ffffff;
+      --card-bg-back: #f8fafc;
+      --surface: #1e293b;
+      --surface-light: #334155;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --success: #10b981;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: var(--bg-color);
+      color: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 4px;
+      gap: 8px;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      background: var(--surface);
+      color: #94a3b8;
+      border: 1px solid var(--surface-light);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    .backup-btn {
+      background: transparent;
+      color: #cbd5e1;
+      border: 1px solid var(--surface-light);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .backup-btn:active {
+      background: var(--surface-light);
+    }
+
+    .stats {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .view-section {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    /* Initial Upload Screen */
+    .upload-box {
+      background: var(--surface);
+      border: 2px dashed #475569;
+      border-radius: 16px;
+      padding: 32px 20px;
+      text-align: center;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .upload-box input {
+      display: none;
+    }
+
+    .upload-btn {
+      display: inline-block;
+      background: var(--primary);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-top: 12px;
+      cursor: pointer;
+    }
+
+    /* Flashcard Stage */
+    .scene {
+      width: 100%;
+      height: 390px;
+      perspective: 1000px;
+      cursor: pointer;
+    }
+
+    .card {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 20px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+
+    .card.is-flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: 20px;
+      padding: 20px 20px 16px 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .card-face-front {
+      background-color: var(--card-bg);
+      color: var(--text-main);
+    }
+
+    .card-face-back {
+      background-color: var(--card-bg-back);
+      color: var(--text-main);
+      transform: rotateY(180deg);
+      border: 1px solid var(--border-color);
+    }
+
+    .tag {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--primary);
+      flex-shrink: 0;
+      margin-bottom: 8px;
+    }
+
+    .card-body {
+      flex: 1;
+      width: 100%;
+      overflow-y: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 6px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .reference-text {
+      font-size: 1.5rem;
+      font-weight: 700;
+      line-height: 1.35;
+      color: #0f172a;
+    }
+
+    .verse-text {
+      font-size: 1.05rem;
+      line-height: 1.6;
+      font-style: italic;
+      color: #334155;
+      margin: auto 0;
+    }
+
+    .flip-hint {
+      flex-shrink: 0;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 10px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(226, 232, 240, 0.8);
+      width: 100%;
+      text-align: center;
+    }
+
+    /* Controls */
+    .controls {
+      width: 100%;
+      display: flex;
+      gap: 12px;
+    }
+
+    button.nav-btn {
+      flex: 1;
+      padding: 13px 0;
+      background: var(--surface);
+      color: white;
+      border: 1px solid var(--surface-light);
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button.nav-btn:active {
+      background: var(--surface-light);
+    }
+
+    button.nav-btn.primary {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .utility-bar {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .text-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 0.8rem;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    /* Collapsible Manager Cards */
+    .manager-card {
+      background: var(--surface);
+      border-radius: 14px;
+      padding: 14px 16px;
+      width: 100%;
+      border: 1px solid var(--surface-light);
+    }
+
+    .collapsible-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .collapsible-header span.title {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .chevron-icon {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      transition: transform 0.25s ease;
+    }
+
+    .collapsible-content {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--surface-light);
+    }
+
+    .collapsed .collapsible-content {
+      display: none;
+    }
+
+    .collapsed .chevron-icon {
+      transform: rotate(-90deg);
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 10px 12px;
+      background: #0f172a;
+      border: 1px solid var(--surface-light);
+      border-radius: 8px;
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 0.9rem;
+    }
+
+    textarea#entry-text {
+      resize: none;
+      min-height: 90px;
+      max-height: 260px;
+      overflow-y: auto;
+      line-height: 1.5;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .action-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-success { background: var(--success); color: white; }
+    .btn-outline { background: transparent; border: 1px solid var(--surface-light); color: #cbd5e1; }
+
+    .search-bar {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .verses-list {
+      width: 100%;
+      max-height: 480px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-right: 4px;
+    }
+
+    .verse-item {
+      background: #0f172a;
+      border: 1px solid var(--surface-light);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .verse-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .item-ref {
+      font-weight: 700;
+      color: #60a5fa;
+      font-size: 0.95rem;
+    }
+
+    .item-text {
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+
+    .item-controls {
+      display: flex;
+      gap: 6px;
+    }
+
+    .item-controls button {
+      background: transparent;
+      border: 1px solid #475569;
+      color: #94a3b8;
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="nav-tabs">
+        <button id="tab-study" class="tab-btn active">Study Cards</button>
+        <button id="tab-manage" class="tab-btn">Manage Deck</button>
+        <button id="header-backup-btn" class="backup-btn">Backup Deck</button>
+      </div>
+      <div id="deck-progress" class="stats">0 / 0</div>
+    </header>
+
+    <!-- Initial Upload Screen (Only shown if no data in localStorage) -->
+    <div id="upload-screen" class="upload-box">
+      <p style="font-weight: 600; font-size: 1.1rem; margin-bottom: 6px;">Load Verses</p>
+      <p style="font-size: 0.85rem; color: #94a3b8;">Select your verses .txt / .json file</p>
+      <label class="upload-btn" for="file-input">Open File</label>
+      <input type="file" id="file-input" accept=".txt,.json" />
+    </div>
+
+    <!-- Hidden file input for replacing deck later -->
+    <input type="file" id="reupload-file-input" accept=".txt,.json" style="display: none;" />
+
+    <!-- VIEW 1: Study Mode -->
+    <section id="study-view" class="view-section hidden">
+      <div id="card-stage" class="scene">
+        <div id="flashcard" class="card">
+          <!-- Front Face -->
+          <div class="card-face card-face-front">
+            <span class="tag">Reference</span>
+            <div class="card-body">
+              <div id="card-ref" class="reference-text"></div>
+            </div>
+            <div class="flip-hint">Tap card to reveal verse</div>
+          </div>
+          <!-- Back Face -->
+          <div class="card-face card-face-back">
+            <span class="tag">Scripture</span>
+            <div class="card-body">
+              <div id="card-verse" class="verse-text"></div>
+            </div>
+            <div class="flip-hint">Tap card to see reference</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="prev-btn" class="nav-btn">Previous</button>
+        <button id="next-btn" class="nav-btn primary">Next</button>
+      </div>
+
+      <div class="utility-bar">
+        <button id="shuffle-btn" class="text-btn">Reshuffle Deck</button>
+        <button id="reupload-deck-btn" class="text-btn" style="color: #60a5fa;">Import New File</button>
+      </div>
+    </section>
+
+    <!-- VIEW 2: Manage Mode -->
+    <section id="manage-view" class="view-section hidden">
+      <!-- Collapsible Add / Edit Section -->
+      <div id="add-edit-section" class="manager-card collapsed">
+        <div id="toggle-add-edit" class="collapsible-header">
+          <span id="form-title" class="title">Add New Verse</span>
+          <span class="chevron-icon">▼</span>
+        </div>
+        <div class="collapsible-content">
+          <div class="input-group">
+            <input type="text" id="entry-ref" placeholder="Reference (e.g., John 3:16)" />
+            <textarea id="entry-text" placeholder="Verse text..."></textarea>
+          </div>
+          <div class="action-row">
+            <button id="save-entry-btn" class="action-btn btn-success">Save Verse</button>
+            <button id="cancel-edit-btn" class="action-btn btn-outline hidden">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Verses List Filter & Display -->
+      <div class="manager-card" style="padding-bottom: 8px;">
+        <input type="text" id="search-input" class="search-bar" placeholder="Filter by reference or keyword..." />
+        <div id="verses-list-container" class="verses-list"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const STORAGE_KEY_VERSES = 'bible_flashcards_data';
+    const STORAGE_KEY_QUEUE  = 'bible_flashcards_queue';
+    const STORAGE_KEY_INDEX  = 'bible_flashcards_index';
+
+    let versesDict = {};
+    let activeQueue = [];
+    let currentIndex = 0;
+    let editingReference = null;
+
+    // DOM Elements
+    const uploadScreen      = document.getElementById('upload-screen');
+    const fileInput         = document.getElementById('file-input');
+    const reuploadFileInput = document.getElementById('reupload-file-input');
+    const reuploadDeckBtn   = document.getElementById('reupload-deck-btn');
+    const headerBackupBtn   = document.getElementById('header-backup-btn');
+    const studyView         = document.getElementById('study-view');
+    const manageView        = document.getElementById('manage-view');
+    const tabStudy          = document.getElementById('tab-study');
+    const tabManage         = document.getElementById('tab-manage');
+    const flashcard         = document.getElementById('flashcard');
+    const cardRef           = document.getElementById('card-ref');
+    const cardVerse         = document.getElementById('card-verse');
+    const progressText      = document.getElementById('deck-progress');
+    const prevBtn           = document.getElementById('prev-btn');
+    const nextBtn           = document.getElementById('next-btn');
+    const shuffleBtn        = document.getElementById('shuffle-btn');
+
+    const addEditSection    = document.getElementById('add-edit-section');
+    const toggleAddEdit     = document.getElementById('toggle-add-edit');
+
+    const entryRef          = document.getElementById('entry-ref');
+    const entryText         = document.getElementById('entry-text');
+    const saveEntryBtn      = document.getElementById('save-entry-btn');
+    const cancelEditBtn     = document.getElementById('cancel-edit-btn');
+    const formTitle         = document.getElementById('form-title');
+    const searchInput       = document.getElementById('search-input');
+    const versesContainer   = document.getElementById('verses-list-container');
+
+    toggleAddEdit.addEventListener('click', () => {
+      addEditSection.classList.toggle('collapsed');
+    });
+
+    function autoResizeTextarea(el) {
+      el.style.height = 'auto';
+      const newHeight = Math.min(Math.max(el.scrollHeight, 90), 260);
+      el.style.height = newHeight + 'px';
+      el.style.overflowY = el.scrollHeight > 260 ? 'auto' : 'hidden';
+    }
+
+    entryText.addEventListener('input', () => autoResizeTextarea(entryText));
+
+    function createShuffledQueue(keys) {
+      const array = [...keys];
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY_VERSES, JSON.stringify(versesDict));
+      localStorage.setItem(STORAGE_KEY_QUEUE, JSON.stringify(activeQueue));
+      localStorage.setItem(STORAGE_KEY_INDEX, currentIndex.toString());
+      progressText.textContent = `${activeQueue.length > 0 ? currentIndex + 1 : 0} / ${activeQueue.length}`;
+    }
+
+    function renderCard() {
+      if (activeQueue.length === 0) {
+        cardRef.textContent = "No verses loaded";
+        cardVerse.textContent = "";
+        return;
+      }
+      flashcard.classList.remove('is-flipped');
+      const ref = activeQueue[currentIndex];
+      cardRef.textContent = ref;
+      cardVerse.textContent = versesDict[ref] || '';
+      saveState();
+
+      document.querySelectorAll('.card-body').forEach(el => el.scrollTop = 0);
+    }
+
+    function renderManageList(filter = '') {
+      versesContainer.innerHTML = '';
+      const filterLower = filter.toLowerCase();
+      const keys = Object.keys(versesDict).filter(ref => {
+        return ref.toLowerCase().includes(filterLower) || versesDict[ref].toLowerCase().includes(filterLower);
+      });
+
+      if (keys.length === 0) {
+        versesContainer.innerHTML = '<div style="color: #64748b; font-size: 0.85rem; text-align: center; padding: 16px;">No matching verses found.</div>';
+        return;
+      }
+
+      keys.forEach(ref => {
+        const item = document.createElement('div');
+        item.className = 'verse-item';
+
+        const header = document.createElement('div');
+        header.className = 'verse-item-header';
+
+        const title = document.createElement('span');
+        title.className = 'item-ref';
+        title.textContent = ref;
+
+        const actions = document.createElement('div');
+        actions.className = 'item-controls';
+
+        const editBtn = document.createElement('button');
+        editBtn.textContent = 'Edit';
+        editBtn.onclick = () => startEdit(ref);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.style.color = 'var(--danger)';
+        deleteBtn.onclick = () => deleteEntry(ref);
+
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
+        header.appendChild(title);
+        header.appendChild(actions);
+
+        const text = document.createElement('div');
+        text.className = 'item-text';
+        text.textContent = versesDict[ref];
+
+        item.appendChild(header);
+        item.appendChild(text);
+        versesContainer.appendChild(item);
+      });
+    }
+
+    function startEdit(ref) {
+      editingReference = ref;
+      entryRef.value = ref;
+      entryText.value = versesDict[ref];
+      formTitle.textContent = `Edit Verse: ${ref}`;
+      cancelEditBtn.classList.remove('hidden');
+      saveEntryBtn.textContent = 'Save Changes';
+      
+      addEditSection.classList.remove('collapsed');
+      autoResizeTextarea(entryText);
+      addEditSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function cancelEdit() {
+      editingReference = null;
+      entryRef.value = '';
+      entryText.value = '';
+      formTitle.textContent = 'Add New Verse';
+      cancelEditBtn.classList.add('hidden');
+      saveEntryBtn.textContent = 'Save Verse';
+      autoResizeTextarea(entryText);
+    }
+
+    function deleteEntry(ref) {
+      if (!confirm(`Delete "${ref}" from your deck?`)) return;
+
+      delete versesDict[ref];
+      activeQueue = activeQueue.filter(k => k !== ref);
+      if (currentIndex >= activeQueue.length) {
+        currentIndex = Math.max(0, activeQueue.length - 1);
+      }
+
+      saveState();
+      renderCard();
+      renderManageList(searchInput.value);
+    }
+
+    saveEntryBtn.addEventListener('click', () => {
+      const ref = entryRef.value.trim();
+      const verse = entryText.value.trim();
+
+      if (!ref || !verse) {
+        alert("Both reference and verse text are required.");
+        return;
+      }
+
+      if (editingReference) {
+        if (editingReference !== ref) {
+          delete versesDict[editingReference];
+          const idx = activeQueue.indexOf(editingReference);
+          if (idx !== -1) activeQueue[idx] = ref;
+        }
+        versesDict[ref] = verse;
+      } else {
+        const isNew = !(ref in versesDict);
+        versesDict[ref] = verse;
+
+        if (isNew) {
+          const viewed = activeQueue.slice(0, currentIndex + 1);
+          const remaining = activeQueue.slice(currentIndex + 1);
+          const randPos = Math.floor(Math.random() * (remaining.length + 1));
+          remaining.splice(randPos, 0, ref);
+          activeQueue = [...viewed, ...remaining];
+        }
+      }
+
+      saveState();
+      renderCard();
+      renderManageList(searchInput.value);
+      cancelEdit();
+      addEditSection.classList.add('collapsed');
+    });
+
+    cancelEditBtn.addEventListener('click', () => {
+      cancelEdit();
+      addEditSection.classList.add('collapsed');
+    });
+
+    searchInput.addEventListener('input', (e) => renderManageList(e.target.value));
+
+    // Export current deck as a .txt backup file
+    headerBackupBtn.addEventListener('click', () => {
+      if (Object.keys(versesDict).length === 0) {
+        alert("No verses loaded to back up.");
+        return;
+      }
+      const dataStr = "data:text/plain;charset=utf-8," + encodeURIComponent(JSON.stringify(versesDict, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "bible_verses.txt");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    });
+
+    tabStudy.addEventListener('click', () => {
+      tabStudy.classList.add('active');
+      tabManage.classList.remove('active');
+      studyView.classList.remove('hidden');
+      manageView.classList.add('hidden');
+      renderCard();
+    });
+
+    tabManage.addEventListener('click', () => {
+      tabManage.classList.add('active');
+      tabStudy.classList.remove('active');
+      manageView.classList.remove('hidden');
+      studyView.classList.add('hidden');
+      renderManageList();
+    });
+
+    document.getElementById('card-stage').addEventListener('click', () => {
+      flashcard.classList.toggle('is-flipped');
+    });
+
+    nextBtn.addEventListener('click', () => {
+      if (currentIndex < activeQueue.length - 1) {
+        currentIndex++;
+      } else {
+        alert("🎉 You completed the deck! Shuffling a fresh round.");
+        activeQueue = createShuffledQueue(Object.keys(versesDict));
+        currentIndex = 0;
+      }
+      renderCard();
+    });
+
+    prevBtn.addEventListener('click', () => {
+      if (currentIndex > 0) {
+        currentIndex--;
+        renderCard();
+      }
+    });
+
+    shuffleBtn.addEventListener('click', () => {
+      if (confirm("Reshuffle deck from the beginning?")) {
+        activeQueue = createShuffledQueue(Object.keys(versesDict));
+        currentIndex = 0;
+        renderCard();
+      }
+    });
+
+    function loadNewDeckFromText(text) {
+      try {
+        const parsed = JSON.parse(text);
+        if (typeof parsed !== 'object' || Array.isArray(parsed)) {
+          throw new Error("Root must be a JSON object.");
+        }
+        versesDict = parsed;
+        activeQueue = createShuffledQueue(Object.keys(versesDict));
+        currentIndex = 0;
+        saveState();
+
+        uploadScreen.classList.add('hidden');
+        studyView.classList.remove('hidden');
+        renderCard();
+        renderManageList();
+      } catch (err) {
+        alert("Invalid file format. Please upload a valid JSON file formatted as {\"Reference\": \"Verse\"}.");
+      }
+    }
+
+    reuploadDeckBtn.addEventListener('click', () => {
+      if (confirm("Importing a new file will replace your active deck. Continue?")) {
+        reuploadFileInput.click();
+      }
+    });
+
+    reuploadFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => loadNewDeckFromText(evt.target.result);
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => loadNewDeckFromText(evt.target.result);
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+
+    // Initialize from localStorage on launch
+    window.addEventListener('DOMContentLoaded', () => {
+      const stored = localStorage.getItem(STORAGE_KEY_VERSES);
+      const storedQueue = localStorage.getItem(STORAGE_KEY_QUEUE);
+      const storedIdx = localStorage.getItem(STORAGE_KEY_INDEX);
+
+      if (stored && storedQueue) {
+        try {
+          versesDict = JSON.parse(stored);
+          activeQueue = JSON.parse(storedQueue);
+          currentIndex = storedIdx !== null ? parseInt(storedIdx, 10) : 0;
+          if (currentIndex >= activeQueue.length) currentIndex = 0;
+
+          uploadScreen.classList.add('hidden');
+          studyView.classList.remove('hidden');
+          renderCard();
+        } catch (e) {
+          localStorage.clear();
+        }
+      }
+    });
+  </script>
+</body>
+</html>
